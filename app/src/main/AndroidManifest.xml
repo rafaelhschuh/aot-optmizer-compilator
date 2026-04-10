@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2024 AOT Compiler Manager Contributors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      QUERY_ALL_PACKAGES: necessário para listar TODOS os pacotes instalados via
+      PackageManager.getInstalledPackages(). Sem esta permissão, em Android 11+,
+      apenas pacotes com intent filters visíveis são retornados.
+      Requer justificativa ao publicar na Play Store (formulário de declaração).
+    -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!--
+      INTERNET: reservado para futuras funcionalidades (download de profiles
+      baseline da comunidade, telemetria opt-in).
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      POST_NOTIFICATIONS: obrigatório em Android 13+ para exibir notificações
+      de progresso do WorkManager durante compilação em background.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      FOREGROUND_SERVICE: WorkManager usa ForegroundService para tasks longas.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!--
+      RECEIVE_BOOT_COMPLETED: permite que o WorkManager reagende jobs pendentes
+      após reinicialização do dispositivo.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:name=".MainApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AotCompilerManager.SplashScreen"
+        android:localeConfig="@xml/locales_config">
+
+        <!-- ── MainActivity ───────────────────────────────────────────────── -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          ── ShizukuProvider ─────────────────────────────────────────────────
+          ContentProvider que age como canal IPC entre o app e o processo Shizuku.
+          A authority DEVE ser "${applicationId}.shizuku" — valor hardcoded no
+          manifesto do processo Shizuku que tentará se conectar a este provider.
+
+          android:permission="android.permission.INTERACT_ACROSS_USERS_FULL":
+            Impede que apps de terceiros acessem este provider diretamente.
+            Apenas o processo Shizuku (rodando como shell/root) tem esta permissão.
+
+          android:multiprocess="false":
+            O provider roda no processo principal do app para que o Binder
+            recebido seja acessível a todo o código do app sem IPC adicional.
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+    </application>
+
+</manifest>

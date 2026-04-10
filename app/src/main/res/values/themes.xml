@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2024 AOT Compiler Manager Contributors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+-->
+<resources>
+    <!--
+      Tema base sem ActionBar — toda a UI é gerenciada pelo Compose.
+      Theme.Material3.DayNight.NoActionBar garante suporte automático a
+      dark mode sem configuração extra no Compose.
+    -->
+    <!--
+      Tema base para a Activity após a SplashScreen.
+      Usa android:Theme.Material.Light.NoActionBar (API 21+) sem deps extras.
+      O Compose gerencia dark mode via isSystemInDarkTheme() — sem necessidade
+      de DayNight no tema XML.
+      enableEdgeToEdge() na Activity cuida de StatusBar/NavBar transparentes.
+    -->
+    <style name="Theme.AotCompilerManager" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
+
+    <!--
+      Tema da SplashScreen — aplicado na Activity até installSplashScreen()
+      chamar postSplashScreenTheme. Requer androidx.core:core-splashscreen.
+    -->
+    <style name="Theme.AotCompilerManager.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item>
+        <item name="postSplashScreenTheme">@style/Theme.AotCompilerManager</item>
+    </style>
+</resources>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2024 AOT Compiler Manager Contributors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+-->
+<resources>
+    <string name="app_name">AOT Compiler Manager</string>
+
+    <!-- ── Shizuku ──────────────────────────────────────────────────────── -->
+    <string name="shizuku_not_running_title">Shizuku não está ativo</string>
+    <string name="shizuku_not_running_message">Inicie o Shizuku via ADB ou via aplicativo Shizuku antes de continuar.</string>
+    <string name="shizuku_permission_denied_title">Permissão Shizuku negada</string>
+    <string name="shizuku_permission_denied_message">O app precisa de permissão Shizuku para executar recompilações AOT.</string>
+    <string name="shizuku_request_permission">Conceder permissão Shizuku</string>
+    <string name="shizuku_open_app">Abrir Shizuku</string>
+
+    <!-- ── Screens ──────────────────────────────────────────────────────── -->
+    <string name="screen_package_list">Pacotes</string>
+    <string name="screen_compilation">Compilação</string>
+    <string name="screen_settings">Configurações</string>
+
+    <!-- ── Compilation Profiles ─────────────────────────────────────────── -->
+    <string name="profile_speed">speed</string>
+    <string name="profile_speed_profile">speed-profile</string>
+    <string name="profile_quicken">quicken</string>
+    <string name="profile_verify_none">verify-none</string>
+    <string name="profile_everything">everything</string>
+    <string name="profile_verify">verify</string>
+    <string name="profile_interpret_only">interpret-only</string>
+
+    <string name="profile_speed_description">Compilação AOT máxima. Maior APK, melhor performance em runtime.</string>
+    <string name="profile_speed_profile_description">AOT guiado por baseline profile. Equilíbrio ideal entre tamanho e velocidade.</string>
+    <string name="profile_quicken_description">Otimizações quicken (interpretadas). Mais leve que speed, mais rápido que verify.</string>
+    <string name="profile_verify_none_description">Sem verificação. Máxima velocidade de instalação, mínima segurança.</string>
+    <string name="profile_everything_description">Compila todos os métodos AOT. Equivalente a speed em versões recentes.</string>
+    <string name="profile_verify_description">Apenas verificação DEX, sem compilação AOT.</string>
+    <string name="profile_interpret_only_description">Interpretação pura, sem JIT. Útil para debug de comportamento de runtime.</string>
+
+    <!-- ── Actions ──────────────────────────────────────────────────────── -->
+    <string name="action_compile">Compilar</string>
+    <string name="action_compile_selected">Compilar selecionados (%d)</string>
+    <string name="action_select_all">Selecionar todos</string>
+    <string name="action_deselect_all">Desmarcar todos</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_retry">Tentar novamente</string>
+    <string name="action_settings">Configurações</string>
+
+    <!-- ── States ───────────────────────────────────────────────────────── -->
+    <string name="state_loading">Carregando pacotes…</string>
+    <string name="state_compiling">Compilando %s…</string>
+    <string name="state_success">Compilação concluída</string>
+    <string name="state_error">Erro ao compilar</string>
+    <string name="state_idle">Nenhuma operação em andamento</string>
+
+    <!-- ── Package Info ─────────────────────────────────────────────────── -->
+    <string name="package_current_profile">Perfil atual: %s</string>
+    <string name="package_target_profile">Perfil destino: %s</string>
+    <string name="package_system">Sistema</string>
+    <string name="package_user">Usuário</string>
+    <string name="package_unknown_profile">Desconhecido</string>
+
+    <!-- ── Settings ─────────────────────────────────────────────────────── -->
+    <string name="settings_default_profile">Perfil padrão de compilação</string>
+    <string name="settings_include_system_apps">Incluir apps do sistema</string>
+    <string name="settings_include_system_apps_summary">Exibir e compilar pacotes do sistema Android</string>
+    <string name="settings_concurrent_compilations">Compilações simultâneas</string>
+    <string name="settings_force_compilation">Forçar recompilação (-f)</string>
+    <string name="settings_force_compilation_summary">Recompila mesmo que o perfil já seja o solicitado</string>
+
+    <!-- ── Notifications ────────────────────────────────────────────────── -->
+    <string name="notification_channel_compilation">Compilação AOT</string>
+    <string name="notification_channel_compilation_description">Notificações de progresso de compilação AOT</string>
+    <string name="notification_compiling_title">Compilando pacotes…</string>
+    <string name="notification_compiling_progress">%1$d de %2$d concluídos</string>
+    <string name="notification_done_title">Compilação concluída</string>
+    <string name="notification_done_message">%d pacotes recompilados com sucesso</string>
+    <string name="notification_error_title">Erro na compilação</string>
+
+    <!-- ── Content Descriptions (Acessibilidade) ───────────────────────── -->
+    <string name="cd_app_icon">Ícone do aplicativo %s</string>
+    <string name="cd_shizuku_status_ok">Shizuku conectado e com permissão</string>
+    <string name="cd_shizuku_status_error">Shizuku desconectado ou sem permissão</string>
+    <string name="cd_back_button">Voltar</string>
+</resources>

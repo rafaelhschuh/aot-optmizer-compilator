@@ -1,0 +1,38 @@
+# Built artifacts
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+
+# Build directories
+build/
+.gradle/
+.kotlin/
+out/
+
+# Android Studio / IntelliJ IDEA
+*.iml
+*.ipr
+*.iws
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local config (contains paths and secrets specific to local machine)
+local.properties
+keystore.properties
+
+# Gradle caches
+.gradle/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Claude internal
+.claude/
