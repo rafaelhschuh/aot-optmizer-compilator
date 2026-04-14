@@ -55,6 +55,19 @@ class RemoteServiceImpl : IRemoteService.Stub() {
     }
 
     /**
+     * Executa `cmd package compile --reset <packageName>` para remover artefatos de
+     * compilação AOT (odex/oat/art) e reverter o estado de dexopt ao padrão.
+     *
+     * Delega para [execute] garantindo que os args são passados via [ProcessBuilder]
+     * sem interpolação em string shell (sem risco de command injection).
+     *
+     * @param packageName Nome canônico do pacote a resetar.
+     * @return stdout do comando.
+     */
+    override fun resetCompilation(packageName: String): String =
+        execute(arrayOf("cmd", "package", "compile", "--reset", packageName))
+
+    /**
      * Mata o processo deste UserService.
      * Chamado quando o app é destruído para liberar recursos.
      */

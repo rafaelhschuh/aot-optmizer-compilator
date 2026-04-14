@@ -12,6 +12,13 @@ interface IRemoteService {
     /** Executa args como ProcessBuilder no contexto privilegiado. Retorna stdout+stderr. */
     String execute(in String[] args);
 
+    /**
+     * Executa `cmd package compile --reset <packageName>` para limpar artefatos de
+     * compilação (odex/oat/art) e reiniciar o estado de dexopt para o padrão.
+     * Retorna stdout+stderr do comando.
+     */
+    String resetCompilation(String packageName);
+
     /** Finaliza o processo do UserService. */
     void destroy();
 }

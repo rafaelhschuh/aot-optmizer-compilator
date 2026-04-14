@@ -10,6 +10,8 @@
 
 package com.aotmanager.app.domain.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Representa um pacote Android instalado no dispositivo.
  *
@@ -23,6 +25,7 @@ package com.aotmanager.app.domain.model
  *                             Obtido via `cmd package dump` — pode ser "unknown"
  *                             se não foi possível consultar via Shizuku.
  */
+@Immutable
 data class AppPackage(
     val packageName: String,
     val label: String,

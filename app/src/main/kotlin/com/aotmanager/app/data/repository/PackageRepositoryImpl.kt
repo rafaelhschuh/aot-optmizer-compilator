@@ -19,6 +19,8 @@ import com.aotmanager.app.data.shizuku.ShizukuNotReadyException
 import com.aotmanager.app.domain.model.AppPackage
 import com.aotmanager.app.domain.model.CompilationProfile
 import com.aotmanager.app.domain.model.CompilationResult
+import com.aotmanager.app.domain.model.LogType
+import com.aotmanager.app.domain.repository.LogRepository
 import com.aotmanager.app.domain.repository.PackageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +38,7 @@ class PackageRepositoryImpl @Inject constructor(
     private val packageManager: PackageManager,
     private val executor: ShizukuCommandExecutor,
     private val parser: PackageInfoParser,
+    private val logRepository: LogRepository,
 ) : PackageRepository {
 
     // SharedFlow usado como trigger de refresh — emitir Unit força re-fetch
@@ -80,6 +83,51 @@ class PackageRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Timber.w(e, "Não foi possível obter filtro de compilação de $packageName")
             "unknown"
+        }
+    }
+
+    override suspend fun getBulkCompilationProfiles(): Map<String, String> {
+        return try {
+            logRepository.log(LogType.APP, "Iniciando getBulkCompilationProfiles (1 chamada Shizuku)")
+            val raw = executor.executeBulkDexoptDump()  // executor loga CMD + preview do output
+
+            val lineCount = raw.lines().size
+            logRepository.log(LogType.APP, "Output recebido: ${raw.length} chars | $lineCount linhas")
+
+            val profiles = parser.parseBulkDexoptStates(raw)
+
+            // Log detalhado do resultado do parse — essencial para diagnosticar problemas de formato
+            logRepository.log(
+                LogType.APP,
+                "parseBulkDexoptStates concluído: ${profiles.size} profiles extraídos de $lineCount linhas\n" +
+                    "Amostra (primeiros 5):\n" +
+                    profiles.entries.take(5).joinToString("\n") { (pkg, filter) -> "  $pkg → $filter" }
+            )
+
+            Timber.i("getBulkCompilationProfiles: ${profiles.size} perfis retornados")
+            profiles
+        } catch (e: Exception) {
+            logRepository.log(LogType.APP, "ERRO em getBulkCompilationProfiles: ${e.javaClass.simpleName}: ${e.message}")
+            Timber.e(e, "Falha ao executar bulk dexopt dump")
+            emptyMap()
+        }
+    }
+
+    override suspend fun resetCompilation(packageName: String): CompilationResult {
+        val start = System.currentTimeMillis()
+        return try {
+            val output = executor.resetCompilation(packageName)
+            val duration = System.currentTimeMillis() - start
+            Timber.i("Reset $packageName em ${duration}ms")
+            // Reutilizamos CompilationResult.Success para sinalizar o reset concluído.
+            // profile = VERIFY porque o estado pós-reset equivale a "verify" na maioria dos devices.
+            CompilationResult.Success(packageName, CompilationProfile.VERIFY, output, duration)
+        } catch (e: ShizukuNotReadyException) {
+            Timber.w(e, "Shizuku não disponível para resetar $packageName")
+            CompilationResult.Failure(packageName, "Shizuku não disponível: ${e.message}", e)
+        } catch (e: Exception) {
+            Timber.e(e, "Falha ao resetar $packageName")
+            CompilationResult.Failure(packageName, e.message ?: "Erro desconhecido", e)
         }
     }
 

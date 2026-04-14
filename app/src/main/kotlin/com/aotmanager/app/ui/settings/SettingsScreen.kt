@@ -10,12 +10,15 @@
 
 package com.aotmanager.app.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -25,14 +28,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.aotmanager.app.BuildConfig
 
-/**
- * Tela de configurações — implementação completa no Prompt 05.
- * Exibe apenas informações da versão do app para o MVP.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(
+    onBack:      () -> Unit,
+    onLogsClick: () -> Unit,
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -54,7 +57,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 headlineContent   = { Text("Versão do app") },
                 supportingContent = {
                     Text(
-                        text  = "${com.aotmanager.app.BuildConfig.VERSION_NAME} (${com.aotmanager.app.BuildConfig.VERSION_CODE})",
+                        text  = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 },
@@ -63,14 +66,25 @@ fun SettingsScreen(onBack: () -> Unit) {
                 headlineContent   = { Text("Build time") },
                 supportingContent = {
                     Text(
-                        text  = com.aotmanager.app.BuildConfig.BUILD_TIME,
+                        text  = BuildConfig.BUILD_TIME,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 },
             )
+
+            HorizontalDivider()
+
             ListItem(
-                headlineContent = { Text("Configurações completas") },
-                supportingContent = { Text("Disponível no Prompt 05") },
+                modifier          = Modifier.clickable(onClick = onLogsClick),
+                headlineContent   = { Text("Logs internos") },
+                supportingContent = { Text("Comandos Shizuku, eventos do app, output bruto do dexopt") },
+                trailingContent   = {
+                    Icon(
+                        imageVector        = Icons.AutoMirrored.Filled.List,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.primary,
+                    )
+                },
             )
         }
     }

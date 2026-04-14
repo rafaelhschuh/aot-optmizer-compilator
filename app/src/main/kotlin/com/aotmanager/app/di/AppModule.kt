@@ -12,7 +12,9 @@ package com.aotmanager.app.di
 
 import android.content.Context
 import android.content.pm.PackageManager
+import com.aotmanager.app.data.log.LogRepositoryImpl
 import com.aotmanager.app.data.repository.PackageRepositoryImpl
+import com.aotmanager.app.domain.repository.LogRepository
 import com.aotmanager.app.domain.repository.PackageRepository
 import dagger.Binds
 import dagger.Module
@@ -26,16 +28,20 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class AppModule {
 
-    /** Liga a interface [PackageRepository] à implementação concreta [PackageRepositoryImpl]. */
+    /** Liga [PackageRepository] à implementação concreta [PackageRepositoryImpl]. */
     @Binds
     @Singleton
     abstract fun bindPackageRepository(impl: PackageRepositoryImpl): PackageRepository
+
+    /** Liga [LogRepository] à implementação em memória [LogRepositoryImpl]. */
+    @Binds
+    @Singleton
+    abstract fun bindLogRepository(impl: LogRepositoryImpl): LogRepository
 
     companion object {
 
         /**
          * Fornece o [PackageManager] do sistema via contexto da Application.
-         *
          * Injetado em [PackageRepositoryImpl] para listar pacotes instalados.
          */
         @Provides

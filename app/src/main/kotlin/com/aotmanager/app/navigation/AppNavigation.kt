@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.aotmanager.app.domain.model.CompilationProfile
 import com.aotmanager.app.ui.compilation.CompilationScreen
+import com.aotmanager.app.ui.logs.LogsScreen
 import com.aotmanager.app.ui.packagelist.PackageListScreen
 import com.aotmanager.app.ui.settings.SettingsScreen
 import kotlinx.serialization.Serializable
@@ -31,13 +32,6 @@ sealed interface AppRoute {
     @Serializable
     data object PackageList : AppRoute
 
-    /**
-     * Tela de compilação.
-     *
-     * @property packageNames Lista de pacotes a compilar.
-     * @property profile      Valor CMD do perfil selecionado (ex: "speed-profile").
-     * @property force        Se `-f` deve ser passado ao comando.
-     */
     @Serializable
     data class Compilation(
         val packageNames: List<String>,
@@ -47,6 +41,9 @@ sealed interface AppRoute {
 
     @Serializable
     data object Settings : AppRoute
+
+    @Serializable
+    data object Logs : AppRoute
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -86,6 +83,13 @@ fun AppNavHost(
 
         composable<AppRoute.Settings> {
             SettingsScreen(
+                onBack     = { navController.popBackStack() },
+                onLogsClick = { navController.navigate(AppRoute.Logs) },
+            )
+        }
+
+        composable<AppRoute.Logs> {
+            LogsScreen(
                 onBack = { navController.popBackStack() },
             )
         }

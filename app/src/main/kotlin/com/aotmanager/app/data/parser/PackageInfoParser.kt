@@ -15,80 +15,153 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Parser para a saída de `cmd package dump <packageName>`.
+ * Parser para saídas dos comandos `cmd package dump <pkg>` e `dumpsys package dexopt`.
  *
- * O formato varia entre versões do Android (9–14), por isso implementamos
- * 4 estratégias em cascata para máxima compatibilidade.
+ * ## Formatos suportados (Android 9–14)
  *
- * ## Exemplo de saída relevante (Android 12+)
+ * **Android 12+ (estratégia 1)**
  * ```
- * Dexopt state:
- *   [com.example.app]
- *     path: /data/app/~~Xxxx/com.example.app-Yyyy/base.apk
- *       arm64: [status=speed-profile] [reason=install]
- *       arm: [status=verify] [reason=boot-after-ota]
+ * arm64: [status=speed-profile] [reason=install]
  * ```
  *
- * ## Exemplo Android 9/10
+ * **Android 10/11 (estratégia 2)**
  * ```
- * Dexopt state:
- *   [com.example.app]
- *     Instruction Set: arm64
- *       0: [status=quicken]
+ * [status=speed-profile]
+ * 0: [status=quicken]
+ * ```
+ *
+ * **Campos odex (estratégia 3)**
+ * ```
+ * odexStatus=speed-profile
+ * ```
+ *
+ * **Fallback compilationFilter (estratégia 4)**
+ * ```
+ * compilationFilter=speed
  * ```
  */
 @Singleton
 class PackageInfoParser @Inject constructor() {
 
+    // ── Regex compartilhadas ──────────────────────────────────────────────────
+
     /**
-     * Extrai o filtro de compilação do arm64 (arquitetura primária) a partir
-     * da saída completa de `cmd package dump`.
+     * Cabeçalho de seção de pacote no dump bulk:  "  [com.example.app]"
      *
-     * @return String como "speed-profile", "verify", "quicken", ou "unknown".
+     * Requisito para não colidir com linhas de status como "[status=speed-profile]":
+     * - Conteúdo dentro dos colchetes deve começar com letra e conter apenas
+     *   letras, dígitos, ponto e underscore (package name canônico).
+     * - O sinal `=` que aparece em entradas de status NÃO está no charset → sem falso positivo.
+     */
+    private val PACKAGE_HEADER_RE = Regex("""^\s*\[([a-zA-Z][a-zA-Z0-9_.]*)\]\s*$""")
+
+    /** Estratégia 1 – Android 12+: `arm64: [status=speed-profile]` */
+    private val ARM64_STATUS_RE = Regex("""arm64:\s*\[status=([a-z][a-z\-]*)\]""")
+
+    /** Estratégia 2 – Android 10/11: `[status=quicken]` ou `0: [status=quicken]` */
+    private val ANY_STATUS_BRACKET_RE = Regex("""\[status=([a-z][a-z\-]*)\]""")
+
+    /** Estratégia 3: `odexStatus=speed-profile` */
+    private val ODEX_STATUS_RE = Regex("""odexStatus=([a-z][a-z\-]*)""")
+
+    /** Estratégia 4 (fallback): `compilationFilter=speed` */
+    private val COMPILE_FILTER_RE = Regex("""compilationFilter=([a-z][a-z\-]*)""")
+
+    // ── API pública ───────────────────────────────────────────────────────────
+
+    /**
+     * Extrai o `compilationFilter` de um único pacote a partir da saída completa
+     * de `cmd package dump <packageName>`. Usa as 4 estratégias em cascata.
+     *
+     * @return String como "speed-profile", "verify", ou "unknown".
      */
     fun parseCompilationFilter(dumpOutput: String): String {
-        return tryParseStatusBracket(dumpOutput)
-            ?: tryParseStatusEquals(dumpOutput)
+        return tryParseArm64StatusBracket(dumpOutput)
+            ?: tryParseAnyStatusBracket(dumpOutput)
             ?: tryParseOdexStatus(dumpOutput)
-            ?: tryParseDexoptState(dumpOutput)
+            ?: tryParseCompileFilter(dumpOutput)
             ?: "unknown"
     }
 
-    // ── Estratégia 1: Android 12+ ─────────────────────────────────────────
-    // Linha: "      arm64: [status=speed-profile] [reason=install]"
-    private fun tryParseStatusBracket(output: String): String? {
-        val regex = Regex("""arm64:\s*\[status=([a-z\-]+)\]""")
-        return regex.find(output)?.groupValues?.getOrNull(1).also {
+    /**
+     * Faz o parse do output de `dumpsys package dexopt` (ou `cmd package dump dexopt`)
+     * e extrai o `compilationFilter` de **todos** os pacotes em uma única varredura O(linhas).
+     *
+     * ## Algoritmo
+     * 1. Itera linha a linha com [lineSequence] (sem alocar String intermediária).
+     * 2. Linha que bate com [PACKAGE_HEADER_RE] → novo `currentPackage`.
+     * 3. Para o pacote atual, tenta extrair status por linha:
+     *    - Linha com `arm64:` → **finaliza** o pacote (status preferencial — arch primária).
+     *    - Linha com outro indicador → armazena como candidato, mas não finaliza
+     *      (permite que `arm64:` numa linha subsequente sobrescreva).
+     * 4. Retorna mapa `packageName → compilationFilter` (apenas valores não-"unknown").
+     *
+     * @param output Saída bruta do comando `dumpsys package dexopt`.
+     * @return Mapa de packageName para compilationFilter (ex: `"com.foo" to "speed-profile"`).
+     *         Pacotes sem status detectado NÃO aparecem no mapa.
+     */
+    fun parseBulkDexoptStates(output: String): Map<String, String> {
+        val result      = mutableMapOf<String, String>()
+        val finalized   = mutableSetOf<String>()   // pacotes com status arm64 confirmado
+        var currentPkg: String? = null
+
+        for (line in output.lineSequence()) {
+
+            // ── Detecta nova seção de pacote ──────────────────────────────
+            val pkgMatch = PACKAGE_HEADER_RE.find(line)
+            if (pkgMatch != null) {
+                currentPkg = pkgMatch.groupValues[1]
+                continue
+            }
+
+            val pkg = currentPkg ?: continue
+            if (pkg in finalized) continue       // arm64 já confirmado — pula linhas restantes
+
+            // ── Estratégia 1: arm64 (status definitivo) ───────────────────
+            val arm64Status = ARM64_STATUS_RE.find(line)?.groupValues?.getOrNull(1)
+            if (arm64Status != null) {
+                result[pkg] = arm64Status
+                finalized.add(pkg)               // não sobrescrever com arch inferior
+                continue
+            }
+
+            // ── Estratégias 2-4: candidato (pode ser sobrescrito por arm64) ─
+            if (pkg !in result) {
+                val candidate = ANY_STATUS_BRACKET_RE.find(line)?.groupValues?.getOrNull(1)
+                    ?: ODEX_STATUS_RE.find(line)?.groupValues?.getOrNull(1)
+                    ?: COMPILE_FILTER_RE.find(line)?.groupValues?.getOrNull(1)
+                if (candidate != null) result[pkg] = candidate
+            }
+        }
+
+        Timber.d("parseBulkDexoptStates: ${result.size} pacotes com status detectado")
+        return result
+    }
+
+    // ── Helpers privados (per-dump, usados por parseCompilationFilter) ────────
+
+    private fun tryParseArm64StatusBracket(output: String): String? {
+        return ARM64_STATUS_RE.find(output)?.groupValues?.getOrNull(1).also {
             if (it != null) Timber.d("Parser estratégia 1 (arm64 bracket): $it")
         }
     }
 
-    // ── Estratégia 2: Android 10/11 ───────────────────────────────────────
-    // Linha: "    [status=speed-profile]"  ou  "0: [status=quicken]"
-    private fun tryParseStatusEquals(output: String): String? {
-        // Pega o primeiro status encontrado na seção Dexopt state
+    private fun tryParseAnyStatusBracket(output: String): String? {
         val dexoptSection = output.substringAfter("Dexopt state:", "")
         if (dexoptSection.isEmpty()) return null
-        val regex = Regex("""\[status=([a-z\-]+)\]""")
-        return regex.find(dexoptSection)?.groupValues?.getOrNull(1).also {
+        return ANY_STATUS_BRACKET_RE.find(dexoptSection)?.groupValues?.getOrNull(1).also {
             if (it != null) Timber.d("Parser estratégia 2 (status equals): $it")
         }
     }
 
-    // ── Estratégia 3: campos odex ─────────────────────────────────────────
-    // Linha: "    odexStatus=speed-profile"
     private fun tryParseOdexStatus(output: String): String? {
-        val regex = Regex("""odexStatus=([a-z\-]+)""")
-        return regex.find(output)?.groupValues?.getOrNull(1).also {
+        return ODEX_STATUS_RE.find(output)?.groupValues?.getOrNull(1).also {
             if (it != null) Timber.d("Parser estratégia 3 (odexStatus): $it")
         }
     }
 
-    // ── Estratégia 4: Fallback — linha "compilationFilter" direta ────────
-    // Linha: "    compilationFilter=speed"
-    private fun tryParseDexoptState(output: String): String? {
-        val regex = Regex("""compilationFilter=([a-z\-]+)""")
-        return regex.find(output)?.groupValues?.getOrNull(1).also {
+    private fun tryParseCompileFilter(output: String): String? {
+        return COMPILE_FILTER_RE.find(output)?.groupValues?.getOrNull(1).also {
             if (it != null) Timber.d("Parser estratégia 4 (compilationFilter): $it")
         }
     }

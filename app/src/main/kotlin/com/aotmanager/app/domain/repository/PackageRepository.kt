@@ -60,4 +60,27 @@ interface PackageRepository {
      * @return String como "speed-profile", "verify", "unknown" (se falhar).
      */
     suspend fun getCompilationFilter(packageName: String): String
+
+    /**
+     * Executa `dumpsys package dexopt` (única chamada Shizuku) e retorna o mapa
+     * completo de `packageName → compilationFilter` para todos os pacotes instalados.
+     *
+     * Substitui N chamadas individuais a [getCompilationFilter] pelo custo O(1) de
+     * IPC + uma varredura linear no texto de saída.
+     *
+     * @return Mapa de packageName para compilationFilter. Pacotes sem status detectado
+     *         não aparecem no mapa (caller deve tratar ausência como "unknown").
+     *         Retorna emptyMap() em caso de falha.
+     */
+    suspend fun getBulkCompilationProfiles(): Map<String, String>
+
+    /**
+     * Executa `cmd package compile --reset <packageName>` para limpar artefatos de
+     * compilação AOT e reverter o estado de dexopt ao padrão do sistema.
+     *
+     * @param packageName Nome do pacote a resetar.
+     * @return [CompilationResult.Success] com a saída do comando, ou
+     *         [CompilationResult.Failure] em caso de erro.
+     */
+    suspend fun resetCompilation(packageName: String): CompilationResult
 }
